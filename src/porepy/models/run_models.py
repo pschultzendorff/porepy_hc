@@ -141,6 +141,7 @@ def run_time_dependent_model(model, params: Optional[dict] = None) -> None:
                 time_step()
                 # Update time progressbar length by the time step size divided by the
                 # initial time step size.
+                # FIXME This will cause problems when the time step is restarted!
                 time_progressbar.update(n=model.time_manager.dt / initial_time_step)
 
     model.after_simulation()

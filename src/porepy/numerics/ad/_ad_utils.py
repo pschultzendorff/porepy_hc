@@ -296,6 +296,7 @@ def discretize_from_list(
 
 def _validate_indices(
     time_step_index: Optional[int] = None,
+    hc_index: Optional[int] = None,
     iterate_index: Optional[int] = None,
 ) -> list[tuple[Any, int]]:
     """Helper method to validate the indexation of getter and setter methods for
@@ -304,10 +305,10 @@ def _validate_indices(
     See :func:`set_solution_values` and :func:`get_solution_values`.
 
     """
-    if time_step_index is None and iterate_index is None:
+    if time_step_index is None and hc_index is None and iterate_index is None:
         raise ValueError(
-            "At least one of time_step_index and iterate_index needs to be different"
-            " from None."
+            "At least one of time_step_index, hc_index, and iterate_index needs to be"
+            + " different from None."
         )
 
     out = []
@@ -320,6 +321,17 @@ def _validate_indices(
         else:
             raise ValueError(
                 "Use increasing, non-negative integers for iterate indices."
+            )
+
+    if hc_index is not None:
+        # Some valid iterate value.
+        if hc_index >= 0:
+            out.append((pp.HC_ITERATE_SOLUTIONS, iterate_index))
+        # Negative iterate indices are not supported
+        else:
+            raise ValueError(
+                "Use increasing, non-negative integers for homotopy continuation"
+                + " indices."
             )
 
     if time_step_index is not None:
@@ -340,6 +352,7 @@ def set_solution_values(
     values: np.ndarray,
     data: dict,
     time_step_index: Optional[int] = None,
+    hc_index: Optional[int] = None,
     iterate_index: Optional[int] = None,
     additive: bool = False,
 ) -> None:
@@ -355,6 +368,12 @@ def set_solution_values(
             Determines the key of where ``values`` are to be stored in
             ``data[pp.TIME_STEP_SOLUTIONS][name]``.
             0 is the most recent time step, 1 the one before that and so on.
+        hc_index: ``default=None``
+
+            Determines the key of where ``values`` are to be stored in
+            ``data[pp.HC_ITERATE_SOLUTIONS][name]``.
+            0 is the current homotopy continuation iterate, 1 the previous homotopy
+            continuation iterate, and so on.
         iterate_index: ``default=None``
 
             Determines the key of where ``values`` are to be stored in
@@ -372,7 +391,7 @@ def set_solution_values(
             values were set before.
 
     """
-    loc_index = _validate_indices(time_step_index, iterate_index)
+    loc_index = _validate_indices(time_step_index, hc_index, iterate_index)
 
     for loc, index in loc_index:
         if loc not in data:
@@ -395,6 +414,7 @@ def get_solution_values(
     name: str,
     data: dict,
     time_step_index: Optional[int] = None,
+    hc_index: Optional[int] = None,
     iterate_index: Optional[int] = None,
 ) -> np.ndarray:
     """Function for fetching values stored in the data dictionary, for some
@@ -429,7 +449,7 @@ def get_solution_values(
         A copy of the values stored at the passed index.
 
     """
-    loc_index = _validate_indices(time_step_index, iterate_index)
+    loc_index = _validate_indices(time_step_index, hc_index, iterate_index)
     if len(loc_index) != 1:
         raise ValueError(
             "Cannot get value from both iterate and time step at once. Call separately."
@@ -483,7 +503,11 @@ def shift_solution_values(
         ValueError: if ``max_index`` is negative.
 
     """
-    if location not in [pp.ITERATE_SOLUTIONS, pp.TIME_STEP_SOLUTIONS]:
+    if location not in [
+        pp.ITERATE_SOLUTIONS,
+        pp.HC_ITERATE_SOLUTIONS,
+        pp.TIME_STEP_SOLUTIONS,
+    ]:
         raise ValueError(f"Shifting values not implemented for location {location}")
 
     # NOTE return because nothing to be shifted. Avoid confusion by introducing data

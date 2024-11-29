@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from enum import Enum
 from functools import reduce
 from hashlib import sha256
@@ -31,6 +32,8 @@ __all__ = [
     "MixedDimensionalVariable",
     "sum_operator_list",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def _get_shape(mat):
@@ -495,7 +498,10 @@ class Operator:
                     # right-power method in the AdArary.
                     return results[1].__rpow__(results[0])
                 else:
-                    return results[0] ** results[1]
+                    try:
+                        return results[0] ** results[1]
+                    except RuntimeWarning:
+                        logger.info("test")
             except ValueError as exc:
                 msg = self._get_error_message(
                     "raising to a power", op.children, results

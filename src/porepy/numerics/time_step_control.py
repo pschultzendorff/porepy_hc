@@ -90,6 +90,7 @@ Algorithm Workflow in Pseudocode:
 from __future__ import annotations
 
 import json
+import logging
 import warnings
 from pathlib import Path
 from typing import Optional, Union
@@ -100,6 +101,8 @@ from numpy.typing import ArrayLike
 import porepy as pp
 
 __all__ = ["TimeManager"]
+
+logger = logging.getLogger(__name__)
 
 
 class TimeManager:
@@ -177,7 +180,7 @@ class TimeManager:
             print_info=True
         )
         # To inspect the attributes of the object
-        print(time_manager)
+        logger.info(time_manager)
 
     Attributes:
         dt (float): Time step.
@@ -551,11 +554,11 @@ class TimeManager:
         if iterations <= self.iter_optimal_range[0]:  # (C1)
             self.dt = self.dt * self.iter_relax_factors[1]
             if self._print_info:
-                print(f"Relaxing time step. Next dt = {self.dt}.")
+                logger.info(f"Relaxing time step. Next dt = {self.dt}.")
         elif iterations >= self.iter_optimal_range[1]:  # (C2)
             self.dt = self.dt * self.iter_relax_factors[0]
             if self._print_info:
-                print(f"Restricting time step. Next dt = {self.dt}.")
+                logger.info(f"Restricting time step. Next dt = {self.dt}.")
         else:
             pass  # (C3)
 
@@ -614,7 +617,7 @@ class TimeManager:
                     "Solution did not converge and will be recomputed."
                     f" Recomputing attempt #{self._recomp_num}. Next dt = {self.dt}."
                 )
-                print(msg)
+                logger.info(msg)
         else:
             # The solution did not converge AND recomputation attempts have been
             # exhausted.
@@ -629,7 +632,7 @@ class TimeManager:
         if self.dt < self.dt_min_max[0]:
             self.dt = self.dt_min_max[0]
             if self._print_info:
-                print(
+                logger.info(
                     f"Calculated dt < dt_min. Using dt_min = {self.dt_min_max[0]}"
                     " instead."
                 )
@@ -639,7 +642,7 @@ class TimeManager:
         if self.dt > self.dt_min_max[1]:
             self.dt = self.dt_min_max[1]
             if self._print_info:
-                print(
+                logger.info(
                     f"Calculated dt > dt_max. Using dt_max = {self.dt_min_max[1]}"
                     " instead."
                 )
@@ -657,7 +660,7 @@ class TimeManager:
             if np.isclose(self.time, schedule_time, rtol=self.rtol, atol=self.atol):
                 # Scheduled time will be reached within tol, no need for correction.
                 if self._print_info:
-                    print(
+                    logger.info(
                         f"Not correcting time step to match scheduled time. Next dt ="
                         f" {self.dt}."
                     )
@@ -667,13 +670,13 @@ class TimeManager:
 
             if self._scheduled_idx < len(self.schedule) - 1:
                 if self._print_info:
-                    print(
+                    logger.info(
                         f"Correcting time step to match scheduled time. Next dt ="
                         f" {self.dt}."
                     )
             else:
                 if self._print_info:
-                    print(
+                    logger.info(
                         f"Correcting time step to match final time. Final dt ="
                         f" {self.dt}."
                     )

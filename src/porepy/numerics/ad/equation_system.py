@@ -561,6 +561,7 @@ class EquationSystem:
         self,
         variables: Optional[VariableList] = None,
         time_step_index: Optional[int] = None,
+        hc_index: Optional[int] = None,
         iterate_index: Optional[int] = None,
     ) -> np.ndarray:
         """Assembles an array containing values for the passed variable-like argument.
@@ -578,6 +579,8 @@ class EquationSystem:
                 VariableType input for which the values are requested.
                 If None (default), the global vector of unknowns is returned.
             time_step_index: Time step index for which the values should be fetched.
+            hc_index: Homotopy continuation iterate index for which the values should be
+                fetched.
             iterate_index: Iterate index for which the values should be fetched.
 
         Raises:
@@ -603,6 +606,7 @@ class EquationSystem:
                     variable.name,
                     self._get_data(variable.domain),
                     time_step_index=time_step_index,
+                    hc_index=hc_index,
                     iterate_index=iterate_index,
                 )
                 # NOTE get_solution_values already returns a copy
@@ -620,6 +624,7 @@ class EquationSystem:
         values: np.ndarray,
         variables: Optional[VariableList] = None,
         time_step_index: Optional[int] = None,
+        hc_index: Optional[int] = None,
         iterate_index: Optional[int] = None,
         additive: bool = False,
     ) -> None:
@@ -644,6 +649,8 @@ class EquationSystem:
                 VariableType input for which the values are prescribed.
                 If None (default), the global vector of unknowns will be set.
             time_step_index: Time step index for which the values are intended.
+            hc_index: Homotopy continuation iterate index for which the values are
+                intended.
             iterate_index: Iterate index for which the values are intended.
             additive: ``default=False``
 
@@ -679,6 +686,7 @@ class EquationSystem:
                     local_vec,
                     self._get_data(grid=variable.domain),
                     time_step_index=time_step_index,
+                    hc_index=hc_index,
                     iterate_index=iterate_index,
                     additive=additive,
                 )
@@ -716,6 +724,18 @@ class EquationSystem:
         for var in self._parse_variable_type(variables):
             pp.shift_solution_values(
                 var.name, self._get_data(var.domain), pp.TIME_STEP_SOLUTIONS, max_index
+            )
+
+    def shift_hc_values(
+        self,
+        variables: Optional[VariableList] = None,
+        max_index: Optional[int] = None,
+    ) -> None:
+        """Analogous to :meth:`shift_time_step_values`, but for homotopy continuation
+        iterates of the current (unknown) time step."""
+        for var in self._parse_variable_type(variables):
+            pp.shift_solution_values(
+                var.name, self._get_data(var.domain), pp.HC_ITERATE_SOLUTIONS, max_index
             )
 
     def shift_iterate_values(
