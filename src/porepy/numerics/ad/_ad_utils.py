@@ -326,7 +326,7 @@ def _validate_indices(
     if hc_index is not None:
         # Some valid iterate value.
         if hc_index >= 0:
-            out.append((pp.HC_ITERATE_SOLUTIONS, iterate_index))
+            out.append((pp.HC_ITERATE_SOLUTIONS, hc_index))
         # Negative iterate indices are not supported
         else:
             raise ValueError(

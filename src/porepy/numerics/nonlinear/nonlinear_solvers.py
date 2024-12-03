@@ -47,7 +47,7 @@ class NewtonSolver:
         # loop or inside a stationary problem (default).
         self.progress_bar_position: int = params.get("progress_bar_position", 0)
 
-    def solve(self, model) -> bool:
+    def solve(self, model) -> tuple[bool, bool]:
         """Solve the nonlinear problem.
 
         Parameters:
@@ -88,18 +88,24 @@ class NewtonSolver:
             )
 
             # Re-discretize the nonlinear term
-            model.before_nonlinear_iteration()
+            try:
+                model.before_nonlinear_iteration()
 
-            nonlinear_increment = self.iteration(model)
+                nonlinear_increment = self.iteration(model)
 
-            model.after_nonlinear_iteration(nonlinear_increment)
-            # Note: The residual is extracted after the solution has been updated by the
-            # after_nonlinear_iteration() method.
-            residual = model.equation_system.assemble(evaluate_jacobian=False)
+                model.after_nonlinear_iteration(nonlinear_increment)
+                # Note: The residual is extracted after the solution has been updated by
+                # the after_nonlinear_iteration() method.
+                residual = model.equation_system.assemble(evaluate_jacobian=False)
 
-            is_converged, is_diverged = model.check_convergence(
-                nonlinear_increment, residual, reference_residual, self.params
-            )
+                is_converged, is_diverged = model.check_convergence(
+                    nonlinear_increment, residual, reference_residual, self.params
+                )
+            # Catch overflows due to divergence.
+            except FloatingPointError as error:
+                logger.error(f"Newton iteration failed: {error}")
+                is_converged = False
+                is_diverged = True
 
         # Progressbars turned off or tqdm not installed:
         if not self.progress_bar or not _IS_TQDM_AVAILABLE:
@@ -143,12 +149,17 @@ class NewtonSolver:
                     )
                     newton_step()
 
-                    solver_progressbar.update(n=1)
-                    # Ignore line being too long, because we would need an additional
-                    # variable to fix this.
-                    solver_progressbar.set_postfix_str(
-                        f"Increment {model.nonlinear_solver_statistics.nonlinear_increment_norms[-1]:.2e}"  # noqa: E501
-                    )
+                    # Do not update the progress bar if something failed during a Newton
+                    # iteration, because
+                    # ``model.nonlinear_solver_statistics.nonlinear_increment_norms``
+                    # might be empty.
+                    if not is_diverged:
+                        solver_progressbar.update(n=1)
+                        # Ignore line being too long, because we would need an
+                        # additional variable to fix this.
+                        solver_progressbar.set_postfix_str(
+                            f"Increment {model.nonlinear_solver_statistics.nonlinear_increment_norms[-1]:.2e}"  # noqa: E501
+                        )
 
                     if is_diverged:
                         # If the process finishes early, the tqdm bar needs to be
@@ -164,7 +175,7 @@ class NewtonSolver:
         if not is_converged:
             model.after_nonlinear_failure()
 
-        return is_converged
+        return is_converged, is_diverged
 
     def iteration(self, model) -> np.ndarray:
         """A single nonlinear iteration.
