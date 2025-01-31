@@ -69,7 +69,7 @@ class NewtonSolver:
         )
 
         # Extract residual of initial guess.
-        reference_residual = model.equation_system.assemble(evaluate_jacobian=False)
+        reference_residual = model.assemble_residual()
 
         # Define a function that does all the work during one Newton iteration, except
         # for everything ``tqdm`` related.
@@ -96,7 +96,7 @@ class NewtonSolver:
                 model.after_nonlinear_iteration(nonlinear_increment)
                 # Note: The residual is extracted after the solution has been updated by
                 # the after_nonlinear_iteration() method.
-                residual = model.equation_system.assemble(evaluate_jacobian=False)
+                residual = model.assemble_residual()
 
                 is_converged, is_diverged = model.check_convergence(
                     nonlinear_increment, residual, reference_residual, self.params

@@ -92,7 +92,7 @@ def run_time_dependent_model(model, params: Optional[dict] = None) -> None:
 
     # Define a function that does all the work during one time step, except
     # for everything ``tqdm`` related.
-    def time_step() -> None:
+    def time_step() -> bool:
         model.time_manager.increase_time()
         model.time_manager.increase_time_index()
         logger.info(
@@ -101,7 +101,7 @@ def run_time_dependent_model(model, params: Optional[dict] = None) -> None:
             + f" of {model.time_manager.time_final:.1e}"
             + f" with time step {model.time_manager.dt:.1e}"
         )
-        solver.solve(model)
+        return solver.solve(model)
 
     # Progressbars turned off or tqdm not installed:
     if not params.get("progressbars", False) or not _IS_TQDM_AVAILABLE:
@@ -138,11 +138,11 @@ def run_time_dependent_model(model, params: Optional[dict] = None) -> None:
                 time_progressbar.set_description_str(
                     f"Time step {model.time_manager.time_index} + 1"
                 )
-                time_step()
-                # Update time progressbar length by the time step size divided by the
-                # initial time step size.
-                # FIXME This will cause problems when the time step is restarted!
-                time_progressbar.update(n=model.time_manager.dt / initial_time_step)
+                is_converged, _ = time_step()
+                if is_converged:
+                    # Update time progressbar length by the time step size divided by the
+                    # initial time step size.
+                    time_progressbar.update(n=model.time_manager.dt / initial_time_step)
 
     model.after_simulation()
 
@@ -237,10 +237,11 @@ def _run_iterative_model(model, params: dict) -> None:
                 time_progressbar.set_description_str(
                     f"Time step {model.time_manager.time_index}"
                 )
-                time_step()
-                # Update time progressbar by the time step size divided by the initial
-                # time step size.
-                time_progressbar.update(n=model._time_step / initial_time_step)
+                is_converged, _ = time_step()
+                if is_converged:
+                    # Update time progressbar length by the time step size divided by the
+                    # initial time step size.
+                    time_progressbar.update(n=model.time_manager.dt / initial_time_step)
 
     model.after_simulation()
 
