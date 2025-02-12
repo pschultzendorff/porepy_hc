@@ -205,6 +205,11 @@ def create_2d_grids(
             faces = line2face[cell_info["line"] == tag]
             g_2d.tags[tag_name][faces] = True
 
+        # Tags for cells.
+        for tag in np.unique(cell_info["triangle"]):
+            tag_name = phys_names[tag].lower() + "_simplices"
+            g_2d.tags[tag_name] = cell_info["triangle"] == tag
+
         # Create mapping to global numbering (will be a unit mapping, but is crucial
         # for consistency with lower dimensions)
         g_2d.global_point_ind = np.arange(pts.shape[0])
